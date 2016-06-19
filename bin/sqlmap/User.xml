@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace命名空间，作用就是对sql进行分类化管理，理解sql隔离 
+注意：使用mapper代理方法开发，namespace有特殊重要的作用
+-->
+<mapper namespace="test">
+
+	<!-- 在映射文件中配置很多sql语句 -->
+	
+	<!-- 通过select执行数据库的查询
+	id：标示映射文件中的sql，称为Statement的Id，将来这个sql语句会封装到mappedStatement对象中，所以讲id称为Statement的id
+	parameterType：指定输入参数的类型，这是指定的是int型
+	#{}：表示一个占位符
+	#{id}：其中的id表示接受输入的参数，参数名就是id；如果输入的简单类型，#{}中的参数名可以任意，可以是value或者其他的名称
+	resultType：输出结果的类型，指定sql输出结果的所映射的Java对象类型，这里select指定resultType表示将单条记录映射成的Java对象
+	 -->
+	<select id="findUserById" parameterType="int" resultType="com.hsx.mybatis.po.User">
+		SELECT * FROM USER WHERE id=#{id}
+	</select>
+	
+	<!-- 根据用户名称模糊查询用户信息,可能返回多条数据 
+	resultType：指定的就是单条记录所映射的Java对象类型(不管是单条还是多条)
+	${}：表示拼接sql串，将接受到参数的内容不加任何修饰拼接在sql中
+	使用${}拼接sql，可能引起sql注入
+	${value}：接收输入参数的内容，如果传入类型是简单类型，${}中只能使用value
+	-->
+	<select id="findUserByUsername" parameterType="java.lang.String" resultType="com.hsx.mybatis.po.User">
+		SELECT * FROM USER WHERE username LIKE '%${value}%'
+	</select>
+	
+	<!-- 添加用户的statement 
+	parameterType：指定输入的参数类型时pojo（包括用户信息）
+	#{}中指定POJO的属性名，接受POJO对象的属性值，mybatis通过OGNL获取对象的属性值
+	-->
+	<insert id="insertUser" parameterType="com.hsx.mybatis.po.User">
+		<!-- 
+		将插入数据的主键返回，返回到user对象中
+		SELECT LAST_INSERT_ID() ：得到刚insert进去记录的主键值，只适用于自增主键
+		keyProperty ： 将查询到主键设置keyProperty指定的对象的哪个属性
+		order ： SELECT LAST_INSERT_ID()执行顺序，相对于insert语句来说它的执行顺序
+		resultType : 指定SELECT LAST_INSERT_ID()的结果类型
+		 -->
+		<selectKey keyProperty="id" order="AFTER" resultType="int">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+		INSERT INTO USER (username, birthday, sex, address) VALUES (#{username}, #{birthday}, #{sex}, #{address})
+	</insert>
+	
+	<!-- 删除用户
+	 -->
+	<delete id="deleteUserById" parameterType="java.lang.Integer">
+		DELETE FROM USER WHERE id = #{id}
+	</delete>
+	
+	<!-- 更新用户 (根据用户的ID更新用户)
+	 分析：需要传入用户的id、需要传入的更新的信息
+	parameterType: 传入用户对象的POJO -> 注意：用户的id必须存在
+	#{id}:从接收的User对象中获取id属性值
+	 -->
+	<update id="updateUserById" parameterType="com.hsx.mybatis.po.User">
+		UPDATE USER SET username=#{username}, birthday=#{birthday}, sex=#{sex}, address=#{address} WHERE id=#{id}
+	</update>
+	
+</mapper>
+
+

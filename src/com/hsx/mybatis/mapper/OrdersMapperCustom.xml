@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace命名空间，作用就是对sql进行分类化管理，理解sql隔离 注意：使用mapper代理方法开发，namespace有特殊重要的作用->namespace等于mapper接口地址 -->
+<mapper namespace="com.hsx.mybatis.mapper.OrdersMapperCustom">
+
+	<!-- 订单查询关联用户的resultMap -->
+	<resultMap type="orders" id="ordersUserResultMap">
+		<!-- 配置映射的订单信息 -->
+		<!-- id：指定查询列中的唯一标识 ,订单信息中的唯一标识，如果有多个列组成唯一标识，就需要配置多个id column:数据库表中的字段 
+			property:程序代码中的实体类中的属性 result:表示查询结果集中普通映射的定义 -->
+		<id column="id" property="id" />
+		<result column="user_id" property="userId" />
+		<result column="number" property="number" />
+		<result column="createtime" property="createtime" />
+		<result column="note" property="note" />
+		<!-- 配置映射关联的用户信息，一对一的映射关系 -->
+		<!-- association:用于映射关联查询单个对象的信息 property： 要将关联查询的用户信息映射到Orders中的哪个属性 -->
+		<association property="user" javaType="com.hsx.mybatis.po.User">
+			<!-- id:关联查询用户的唯一标识 column:指定唯一标识用户信息的列(数据库表的字段) javaType：映射到user的哪个属性（实体的属性） -->
+			<id column="user_id" property="id" />
+			<result column="username" property="username" />
+			<result column="sex" property="sex" />
+			<result column="address" property="address" />
+		</association>
+	</resultMap>
+
+
+	<!-- 查询订单关联查询用户及订单明细的resultMap 使用extends继承，不用再配置订单信息和用户信息的映射 -->
+	<resultMap type="orders" id="ordersAndOrderDetialResultMap"
+		extends="ordersUserResultMap">
+
+		<!-- 使用继承，订单信息和用户信息就不需要在配置了 -->
+
+		<!-- 订单明细信息 一个订单关联查询出了多条明细，要使用Collection进行映射，注意：这里使一对多的映射关系 collection: 
+			对关联查询到的多条记录映射到集合POJO对象中，association：将关联查询到的一条记录映射到单个POJO对象中 property：将关联查询到的多条记录映射到com.hsx.mybatis.po.Orders哪个属性 
+			ofType: 指定映射到集合属性中POJO对象的类型 -->
+		<collection property="orderDetials" ofType="com.hsx.mybatis.po.OrderDetial">
+			<!-- id: 订单明细的唯一标识 column: 数据库表的列名，注意着把这个份这个字段做了别名处理，不然数据库中会有两个id字段 property： 
+				上面column字段对象POJO对象中的属性名 -->
+			<id column="orderdetail_id" property="id" />
+			<result column="items_id" property="itemsId" />
+			<result column="orders_id" property="ordersId" />
+			<result column="items_num" property="itemsNums" />
+		</collection>
+	</resultMap>
+
+
+	<!-- 查询用户及购买的商品信息的resultMap -->
+	<resultMap type="user" id="userAndItemsResultMap">
+		<!-- 用户信息 user -->
+		<id column="user_id" property="id" />
+		<result column="username" property="username" />
+		<result column="sex" property="sex" />
+		<result column="address" property="address" />
+		<!-- 订单信息 orders -->
+		<collection property="orders" ofType="com.hsx.mybatis.po.Orders">
+			<id column="id" property="id" />
+			<result column="user_id" property="userId" />
+			<result column="number" property="number" />
+			<result column="createtime" property="createtime" />
+			<result column="note" property="note" />
+			<!-- 订单明细 orderDetial -->
+			<collection property="orderDetials" ofType="com.hsx.mybatis.po.OrderDetial">
+				<id column="orderdetail_id" property="id" />
+				<result column="items_id" property="itemsId" />
+				<result column="orders_id" property="ordersId" />
+				<result column="items_num" property="itemsNums" />
+				<!-- 商品信息 items -->
+				<association property="items" javaType="com.hsx.mybatis.po.Items">
+					<id column="items_id" property="id"/>
+					<result column="items_name" property="name"/>
+					<result column="items_detail" property="detail"/>
+					<result column="items_price" property="price"/>
+				</association>
+			</collection>
+		</collection>
+	</resultMap>
+
+
+	<!-- 查询订单关联查询用户,使用resultType -->
+	<select id="findOrdersUser" resultType="ordersCustom">
+		SELECT o.*, u.username,
+		u.sex, u.address FROM orders o, user u WHERE o.user_id = u.id
+	</select>
+
+	<!-- 查询订单关联查询用户,使用resultType -->
+	<select id="findOrdersUserResultMap" resultMap="ordersUserResultMap">
+		SELECT o.*,
+		u.username, u.sex, u.address FROM orders o, user u WHERE o.user_id =
+		u.id
+	</select>
+
+	<!-- 查询订单关联查询用户及订单明细，使用resultMap -->
+	<select id="findOrdersAndOrderDetialResultMap" resultMap="ordersAndOrderDetialResultMap">
+		SELECT
+		o.*, u.username, u.sex, u.address, od.id orderdetail_id, od.items_id,
+		od.orders_id, od.items_num
+		FROM
+		orders o, USER u, Orderdetail od
+		WHERE
+		o.user_id = u.id AND o.id = od.orders_id
+	</select>
+
+	<!-- 查询用户及购买的商品信息，使用resultMap -->
+	<select id="findUserAndItemsResultMap" resultMap="userAndItemsResultMap">
+		SELECT
+		o.*,
+		u.username, u.sex, u.address, od.id orderdetail_id, od.items_id,
+		od.orders_id, od.items_num, i.name items_name, i.detail items_detail, i.price items_price
+		FROM
+		orders o,
+		USER u, Orderdetail od, items i
+		WHERE
+		o.user_id = u.id AND o.id =
+		od.orders_id AND i.id = od.items_id
+	</select>
+
+
+
+	<resultMap type="com.hsx.mybatis.po.Orders" id="orderAndUserByLazying">
+		<!-- 订单信息 -->
+		<id column="id" property="id" />
+		<result column="user_id" property="userId" />
+		<result column="number" property="number" />
+		<result column="createtime" property="createtime" />
+		<result column="note" property="note" />
+		<!-- 用户信息，使用懒加载 
+			SELECT orders.*,
+				(SELECT username FROM USER WHERE orders.user_id = user.id) username,
+				(SELECT sex FROM USER WHERE orders.user_id = user.id) sex 
+			FROM orders
+		-->
+		<association property="user" javaType="com.hsx.mybatis.po.User" 
+			select="com.hsx.mybatis.mapper.UserMapper.findUserById" column="user_id"></association>
+	</resultMap>
+
+
+	<!-- 查询订单信息关联用户信息，使用懒加载-->
+	<select id="findOrderAndUserByLazying" resultMap="orderAndUserByLazying">
+		SELECT * FROM orders
+	</select>
+
+
+</mapper>
+
+
